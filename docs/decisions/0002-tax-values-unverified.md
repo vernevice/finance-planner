@@ -1,8 +1,26 @@
 # 0002 — FY2027 tax values recorded UNVERIFIED; ATO unreachable
 
 **Date:** 2026-08-04
-**Status:** Open — blocks Phase 1
+**Status:** Mostly resolved — 13 of 15 verified, 2 still gated
 **Touches invariants:** §2.4 (tax values are config, verified, never from memory)
+
+> **Update 2026-08-04.** Resolved by the second route this record anticipated:
+> the household opened the ATO pages and confirmed the figures. 13 of 15
+> values are now `VERIFIED`, stamped `verified_by: household` with
+> `verified_via` recording that a person read the source rather than the
+> model. Two remain deliberately gated:
+>
+> * `super.maximum_contribution_base` — the figure was not confirmed and the
+>   **period** is still unresolved. Renamed from
+>   `maximum_contribution_base_quarterly`, because the old name presupposed
+>   the answer to the open question.
+> * `super.carry_forward.total_super_balance_threshold` — no figure captured,
+>   and still no candidate.
+>
+> Per-value verification worked as designed: `config/loader.py` raises per
+> value, so the 13 are usable while the 2 stay blocked. The network egress
+> block described below is unchanged — it is simply no longer the binding
+> constraint.
 
 ## The change
 

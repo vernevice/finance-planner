@@ -148,20 +148,62 @@ def test_unverified_fields_are_enumerable(tax):
 # filled in and verified — a failure here means progress, not a bug.
 
 
-def test_the_committed_tax_table_is_entirely_unverified():
+#: The two FY2027 values still gated after the 2026-08-04 verification pass.
+#: Both were left deliberately — see the notes in tax/FY2027.yaml.
+STILL_GATED = {
+    "super.maximum_contribution_base",
+    "super.carry_forward.total_super_balance_threshold",
+}
+
+
+def test_the_committed_tax_table_is_partially_verified():
     table = TaxTable.load(REPO / "tax" / "FY2027.yaml")
     assert table.financial_year == "FY2027"
-    stamps = table.stamps()
-    assert stamps, "expected stamped values in tax/FY2027.yaml"
-    assert table.unverified_fields() == [path for path, _ in stamps]
+    assert table.stamps(), "expected stamped values in tax/FY2027.yaml"
+    assert set(table.unverified_fields()) == STILL_GATED
+    assert not table.is_fully_verified()
 
 
-def test_no_committed_tax_value_can_be_read():
-    """ato.gov.au was unreachable, so nothing in the file may be used (0002)."""
+def test_verified_values_are_readable():
     table = TaxTable.load(REPO / "tax" / "FY2027.yaml")
-    for path, _ in table.stamps():
+    assert table.get("super.concessional_cap") == 32500
+    assert table.get("super.division_293.threshold") == 250000
+    assert table.get("cgt.discount_rate") == 0.50
+    assert table.get("cgt.discount_min_holding_months") == 12
+    assert table.get("income_tax.medicare_levy") == 0.02
+    brackets = table.get("income_tax.resident_brackets")
+    assert brackets[-1] == {"up_to": None, "rate": 0.45}
+
+
+def test_the_two_gated_values_still_raise():
+    """These two would each cause a specific, quiet error if let through:
+    an unresolved quarterly/annual period understates SG fourfold, and a
+    guessed carry-forward threshold gates a real contribution decision."""
+    table = TaxTable.load(REPO / "tax" / "FY2027.yaml")
+    for path in STILL_GATED:
         with pytest.raises(ValueUnverified):
             table.get(path)
+
+
+def test_a_verified_value_never_carries_a_leftover_candidate():
+    """A stamp that is VERIFIED but still holds a `candidate` is ambiguous
+    about which figure was actually confirmed."""
+    table = TaxTable.load(REPO / "tax" / "FY2027.yaml")
+    for path, stamp in table.stamps():
+        if stamp.get("status") == "VERIFIED":
+            assert "candidate" not in stamp, f"tax.{path} is VERIFIED but keeps a candidate"
+
+
+def test_every_verified_value_records_who_checked_it_and_when():
+    """§2.4 — stamped with the source and the date it was verified. A bare
+    VERIFIED with no provenance is not a verification record."""
+    table = TaxTable.load(REPO / "tax" / "FY2027.yaml")
+    for path, stamp in table.stamps():
+        if stamp.get("status") == "VERIFIED":
+            assert stamp.get("verified_on"), f"tax.{path} has no verified_on"
+            assert stamp.get("verified_by"), f"tax.{path} has no verified_by"
+            assert stamp.get("source_url"), f"tax.{path} has no source_url"
+            assert stamp["value"] is not None, f"tax.{path} is VERIFIED but null"
 
 
 def test_committed_policy_has_the_two_settled_values():

@@ -25,10 +25,13 @@ adviser.
 |---|---|
 | **Phase** | 0 — Ledger and surplus |
 | **Exit criterion** | Two consecutive months where computed surplus matches reality within 2% |
-| **Blocked on** | `policy.yaml` and `tax/FY2027.yaml` are scaffolded but unfilled |
+| **Blocked on** | No mortgage rate, 12 undecided policy fields, 2 gated tax values |
 
-No engine code exists yet, by design: §9 puts config before code, and both
-config files are still incomplete.
+`ledger/` and `config/` exist and are tested. `engine/` is still empty by
+design: the §5 waterfall encodes preferences that `policy.yaml` has not
+stated yet, and writing it early means guessing them in code, where a guess
+is far harder to spot than a `REQUIRED` sentinel in YAML
+([0007](docs/decisions/0007-code-before-config-complete.md)).
 
 ### Settled
 
@@ -36,20 +39,23 @@ config files are still incomplete.
 - **Risk premium: 250bps** over the mortgage rate, provisional within a stated
   200–300 range — [0006](docs/decisions/0006-risk-premium-250bps.md).
 - **Raw data stays out of git** — [0004](docs/decisions/0004-raw-data-not-committed.md).
+- **13 of 15 FY2027 tax values verified** against ATO pages by the household
+  on 2026-08-04 — [0002](docs/decisions/0002-tax-values-unverified.md).
 
 ### What is still blocking
 
-1. **Every value in `tax/FY2027.yaml` is `UNVERIFIED`.** `ato.gov.au` was
-   unreachable from the environment where this was scaffolded, so nothing
-   could be checked against source. Needs a person on a network that can
-   reach it — [0002](docs/decisions/0002-tax-values-unverified.md).
+1. **`accounts.yaml` has no accounts**, so there is no mortgage rate — and
+   §5.4 compares against `mortgage_rate + risk_premium_bps`. The premium is
+   set; the thing it is a premium *over* is not.
 2. **`policy.yaml` is still partly unfilled.** `super.hurdle_bps`,
    `investment.expected_return`, and `ownership.optimise_for_marginal_rate`
    are the consequential ones. Full list in
    [0001](docs/decisions/0001-policy-values-pending.md).
-3. **`accounts.yaml` has no accounts**, so there is no mortgage rate — and
-   §5.4 compares against `mortgage_rate + risk_premium_bps`. The premium is
-   set; the thing it is a premium *over* is not.
+3. **Two tax values remain gated**, both deliberately:
+   `super.maximum_contribution_base` (quarterly or annual — unresolved, and a
+   4× error in employer SG if read wrong) and
+   `super.carry_forward.total_super_balance_threshold` (no figure captured;
+   `policy.super.use_carry_forward` cannot be acted on without it).
 
 Also note: with raw data out of git, §2.3's append-only invariant is
 convention rather than something git enforces, so an edit to a raw export
@@ -63,13 +69,13 @@ treated as evidence of anything.
 ```
 policy.yaml       preferences and constraints          ← 14 fields REQUIRED
 accounts.yaml     account_id → metadata, loan rate     ← unfilled
-tax/FY2027.yaml   brackets, caps, CGT                  ← 15 values UNVERIFIED
+tax/FY2027.yaml   brackets, caps, CGT                  ← 13 verified, 2 gated
 config/           loads and gates the above
 data/raw/         bank exports, never edited           ← gitignored
 data/snapshots/   computed monthly snapshots           ← gitignored
 ledger/           facts: schema.py, rules.yaml         ← no ingest.py yet
 engine/           pure functions — no I/O, no network  ← empty, by design
-tests/            44 tests, all passing
+tests/            47 tests, all passing
 docs/decisions/   one record per policy change
 docs/monthly/     the monthly review output
 ```
@@ -94,10 +100,14 @@ PyYAML.
 The suite is mostly the invariants written as executable checks: floats
 rejected as amounts, `owner` never inferred, the ledger offering no delete,
 `UNVERIFIED` tax values raising instead of returning, `REQUIRED` policy fields
-raising instead of returning the string. Several tests pin the *current*
-state — that the committed tax table is entirely unverified, and that the repo
-cannot yet produce a recommendation. Those are expected to fail as config gets
-filled in. A failure there means progress, not a bug.
+raising instead of returning the string, and every `VERIFIED` value carrying a
+source, a date and a verifier.
+
+Several tests pin the *current* state — which two tax values are still gated,
+and that the repo cannot yet produce a recommendation. These are expected to
+fail as config gets filled in; a failure there means progress, not a bug. Two
+already have: verifying the tax table broke the tests asserting it was
+entirely unverified, which is what they were for.
 
 ## The waterfall
 
@@ -130,10 +140,10 @@ move.
 
 ## Next steps
 
-1. Verify `tax/FY2027.yaml` against ATO guidance from a network that can
-   reach it. 15 values, each with its `source_url` already recorded.
-2. Fill in `accounts.yaml`, including the current mortgage rate — §5.4 has
+1. Fill in `accounts.yaml`, including the current mortgage rate — §5.4 has
    nothing to compare against without it.
+2. Close out the two remaining tax values (see above); both have their
+   `source_url` recorded.
 3. Fill in the remaining 12 `policy.yaml` fields, one decision record per
    material choice.
 4. Then `ledger/ingest.py`, once real bank exports exist to write it against.
