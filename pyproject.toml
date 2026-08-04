@@ -1,0 +1,23 @@
+[project]
+name = "finance-planner"
+version = "0.0.0"
+description = "Medium-term household financial planning workflow (AU)"
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Put the repo root on sys.path so `ledger`, `config` and `engine` import
+# without an install step.
+pythonpath = ["."]
+addopts = "-q"
+
+[tool.setuptools]
+packages = ["ledger", "config", "engine"]

@@ -61,21 +61,43 @@ treated as evidence of anything.
 ## Layout
 
 ```
-policy.yaml       preferences and constraints          ← unfilled
+policy.yaml       preferences and constraints          ← 14 fields REQUIRED
 accounts.yaml     account_id → metadata, loan rate     ← unfilled
-tax/FY2027.yaml   brackets, caps, CGT                  ← UNVERIFIED
+tax/FY2027.yaml   brackets, caps, CGT                  ← 15 values UNVERIFIED
+config/           loads and gates the above
 data/raw/         bank exports, never edited           ← gitignored
 data/snapshots/   computed monthly snapshots           ← gitignored
-ledger/           facts: schema, ingest, rules         ← rules.yaml only
-engine/           pure functions — no I/O, no network  ← empty
-tests/                                                 ← empty
+ledger/           facts: schema.py, rules.yaml         ← no ingest.py yet
+engine/           pure functions — no I/O, no network  ← empty, by design
+tests/            44 tests, all passing
 docs/decisions/   one record per policy change
 docs/monthly/     the monthly review output
 ```
 
 The three-layer split is hard: `ledger/` holds facts and no judgement,
 `engine/` holds pure functions that never touch a file or a network, and
-`policy.yaml` + `tax/` hold config. Nothing crosses.
+`policy.yaml` + `tax/` hold config. Nothing crosses. `config/` is the I/O
+boundary that turns YAML into values — it exists because `engine/` is
+forbidden from reading files, and it is an addition to the §3 layout
+([0007](docs/decisions/0007-code-before-config-complete.md)).
+
+## Running the tests
+
+```sh
+python3 -m pytest
+```
+
+Use `python3 -m pytest`, not bare `pytest` — on some setups the `pytest` on
+PATH is an isolated tool install with its own interpreter that cannot see
+PyYAML.
+
+The suite is mostly the invariants written as executable checks: floats
+rejected as amounts, `owner` never inferred, the ledger offering no delete,
+`UNVERIFIED` tax values raising instead of returning, `REQUIRED` policy fields
+raising instead of returning the string. Several tests pin the *current*
+state — that the committed tax table is entirely unverified, and that the repo
+cannot yet produce a recommendation. Those are expected to fail as config gets
+filled in. A failure there means progress, not a bug.
 
 ## The waterfall
 
@@ -108,11 +130,17 @@ move.
 
 ## Next steps
 
-1. Fill in `policy.yaml`, one decision record per material choice.
-2. Fill in `accounts.yaml`, including the current mortgage rate.
-3. Verify `tax/FY2027.yaml` against ATO guidance from a network that can
-   reach it.
-4. Decide the raw-data question in
-   [0004](docs/decisions/0004-raw-data-not-committed.md).
-5. Only then start Phase 0 code: `ledger/schema.py`, `ledger/ingest.py`, and a
-   config loader that enforces the `UNVERIFIED` gate — with tests first.
+1. Verify `tax/FY2027.yaml` against ATO guidance from a network that can
+   reach it. 15 values, each with its `source_url` already recorded.
+2. Fill in `accounts.yaml`, including the current mortgage rate — §5.4 has
+   nothing to compare against without it.
+3. Fill in the remaining 12 `policy.yaml` fields, one decision record per
+   material choice.
+4. Then `ledger/ingest.py`, once real bank exports exist to write it against.
+   It is deliberately absent: a parser for CSVs nobody has seen would be
+   fiction.
+5. Then `engine/` and the §5 waterfall — not before, since the waterfall
+   encodes the preferences that step 3 sets.
+
+`python3 -c "from config.loader import Config; print(*Config.load('.').blockers(), sep=chr(10))"`
+prints exactly what is standing in the way at any point.
