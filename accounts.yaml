@@ -1,0 +1,51 @@
+# accounts.yaml — stable account_id → account metadata.
+#
+# Referenced by §4 ("Stable key, mapped in `accounts.yaml`") but not shown in
+# the §3 layout; placed at the repo root alongside policy.yaml since it is
+# config, not facts and not judgement. Flagged in the session notes as a small
+# gap in the brief rather than resolved silently.
+#
+# STATUS: SCAFFOLD — no real accounts defined.
+#
+# account_id must be STABLE across CSV exports. Bank exports frequently change
+# column order, date format, and the display name of an account; they rarely
+# change the account number. Key off the number, keep the display name as a
+# label only.
+#
+# Getting `kind` right matters more than it looks: the transfer-detection rules
+# in ledger/rules.yaml work by recognising movement BETWEEN accounts listed
+# here. An account that is missing from this file cannot have its transfers
+# detected, and its internal movement will be counted as income or expenses —
+# the exact failure mode §4 calls out as silently corrupting surplus.
+
+schema_version: 1
+
+accounts: []
+# Example shape — delete this comment block once real accounts are added.
+#
+# - account_id: offset_main
+#   display_name: "Everyday Offset"
+#   kind: offset            # offset | transaction | savings | mortgage | super | broker
+#   owner: joint            # person_a | person_b | joint
+#   institution: REQUIRED
+#   currency: AUD
+#   # Both incomes are deposited here (§1), so this account generates most of
+#   # the household's internal movement.
+#   offsets_account: mortgage_main
+#
+# - account_id: mortgage_main
+#   display_name: "Home Loan"
+#   kind: mortgage
+#   owner: joint
+#   institution: REQUIRED
+#   currency: AUD
+#   # The mortgage rate is a property of the loan, not a preference, so it
+#   # lives here rather than in policy.yaml — it changes when the lender moves
+#   # it, which is not a policy decision and must not require a decision
+#   # record. §5.3 and §5.4 read the hurdle from this field.
+#   interest_rate_bps: REQUIRED
+#   rate_type: variable     # variable | fixed
+#   rate_verified_on: REQUIRED   # date the rate was last checked against a statement
+#   fixed_until: null
+#   purpose: owner_occupied # owner_occupied | investment — drives deductibility
+#                           # (Phase 5 only; not modelled)

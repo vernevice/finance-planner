@@ -1,0 +1,82 @@
+# ledger/rules.yaml — description/merchant → category, owner, is_transfer.
+#
+# Phase 0: deterministic rules run FIRST. The LLM classifies only the residual
+# and writes its answers back into this file, so no merchant is ever asked
+# about twice (§7). This file is therefore expected to grow monotonically and
+# is the main artefact of Phase 0.
+#
+# This file contains PATTERNS, not judgement about a household's finances —
+# it stays on the facts side of the §2.2 layer split.
+#
+# STATUS: SCAFFOLD — no rules defined. Rules are added as real exports land in
+# data/raw/, because inventing merchant patterns for transactions that have
+# not been seen produces rules that match nothing and hide the ones that do.
+
+schema_version: 1
+
+# Evaluation order:
+#   1. transfers      — checked first; a matched transfer short-circuits
+#   2. income
+#   3. expenses
+#   4. anything unmatched → category: UNCLASSIFIED
+#
+# Within a section, the FIRST matching rule wins, so put specific patterns
+# above general ones.
+#
+# Match fields:
+#   match:        case-insensitive substring of the raw description
+#   match_regex:  anchored regex, if substring is not enough
+#   account_id:   restrict the rule to one account
+#   amount_sign:  positive | negative — guards against a merchant that both
+#                 charges and refunds
+#   min_amount / max_amount: absolute value bounds
+
+# ── Transfers ───────────────────────────────────────────────────────────────
+# The highest-risk classification in the whole system (§4). Both incomes land
+# in the offset and are moved out again, so this section sees heavy traffic.
+# A missed transfer inflates BOTH income and expenses, and the error is
+# invisible in the totals because it nets out of the balance — but it does not
+# net out of surplus.
+#
+# Prefer matching on the account PAIR rather than the description text: banks
+# rewrite transfer descriptions, but the counterparty account does not change.
+transfers: []
+# - match: "TRANSFER TO HOME LOAN"
+#   from_account: offset_main
+#   to_account: mortgage_main
+#   is_transfer: true
+
+# ── Income ──────────────────────────────────────────────────────────────────
+# `owner` is mandatory on every income rule (§2.5). Cashflow rolls up to the
+# household, but tax, super and ownership decisions all drop back to the
+# individual, and that is impossible to reconstruct after the fact.
+#
+# Salary credits should also record whether the amount is net of salary
+# sacrifice — §5.2 needs expected employer SG to compute remaining cap
+# headroom, and a net-of-sacrifice figure understates it.
+income: []
+# - match: "ACME PTY LTD SALARY"
+#   category: salary
+#   owner: person_a
+#   is_transfer: false
+#   salary_sacrifice_included: false
+
+# ── Expenses ────────────────────────────────────────────────────────────────
+# `essential: true` marks a category as non-discretionary. This feeds
+# policy.buffer.basis — if that is set to `non_discretionary`, only these
+# categories count toward the buffer target, on the reasoning that
+# discretionary spend can be cut in a real emergency.
+expenses: []
+# - match: "WOOLWORTHS"
+#   category: groceries
+#   owner: joint
+#   essential: true
+#   is_transfer: false
+
+# ── Never auto-classify ─────────────────────────────────────────────────────
+# Descriptions matching these are always left UNCLASSIFIED for human review,
+# even if a rule above would match. Use for large or irregular items where a
+# wrong guess would move surplus materially — one-off capital costs, tax
+# refunds, bonuses, insurance payouts.
+always_review:
+  - min_amount: null # e.g. 5000 — review anything above this, whatever it is

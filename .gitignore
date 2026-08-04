@@ -1,0 +1,32 @@
+# ── Raw bank exports ────────────────────────────────────────────────────────
+# Ignored BY DEFAULT. This is a deliberate, conservative choice, not an
+# oversight — see docs/decisions/0004-raw-data-not-committed.md.
+#
+# The §2.3 append-only invariant is best enforced by git history, which argues
+# for committing these. But they are unredacted bank statements, and pushing
+# them to a remote is not reversible. The default therefore fails safe.
+#
+# To opt in once the repo's visibility and remote are confirmed acceptable,
+# delete the two lines below.
+data/raw/**/*.csv
+data/raw/**/*.ofx
+
+# Computed snapshots are derived, not raw, but still contain balances and
+# income. Same reasoning; same opt-in.
+data/snapshots/*.json
+
+# ── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# ── Editors / OS ────────────────────────────────────────────────────────────
+.DS_Store
+.idea/
+.vscode/
+*.swp
