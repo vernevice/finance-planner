@@ -1,0 +1,146 @@
+# policy.yaml — the user's stated preferences and constraints.
+#
+# This file is CONFIG, not facts and not judgement (invariant §2.2).
+# Every change here requires a decision record in docs/decisions/ (§6).
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# STATUS: SCAFFOLD. No values have been set yet.
+#
+# Fields marked REQUIRED are decisions only the household can make. They are
+# deliberately NOT defaulted: a guessed risk premium or buffer size silently
+# drives every allocation the engine will ever produce, and a plausible-looking
+# wrong number is worse than an obviously missing one.
+#
+# Per §9: if these cannot be stated, that is the real blocker and it is not a
+# software one. See docs/decisions/0001-policy-values-pending.md.
+# ─────────────────────────────────────────────────────────────────────────────
+
+schema_version: 1
+
+# ── Identity ────────────────────────────────────────────────────────────────
+# `owner` is a first-class field on every income line (§2.5). These map the
+# enum values used throughout ledger/ and engine/ to real people. Names are
+# only for narration; the engine keys off person_a / person_b / joint.
+owners:
+  person_a:
+    name: REQUIRED # display name, e.g. "Sam"
+    birth_year: REQUIRED # drives preservation age + super access horizon
+  person_b:
+    name: REQUIRED
+    birth_year: REQUIRED
+
+# ── §5.1 Buffer ─────────────────────────────────────────────────────────────
+# First claim on all surplus. Non-negotiable within the waterfall.
+buffer:
+  # Months of *expenses* (not income) to hold in the offset before any other
+  # step gets a dollar. Expenses are computed from the ledger, not stated here.
+  #
+  # The number is a risk-tolerance statement about job loss and unexpected
+  # capital costs. It is not a market view. Common range is 3–12; the right
+  # answer depends on income stability, notice periods, and whether both
+  # incomes could stop at once (same employer, same industry, same sector).
+  months: REQUIRED # integer or decimal, e.g. 6
+
+  # Which expenses count toward the buffer target. Discretionary spend can be
+  # cut in a genuine emergency, so including it overstates the required buffer.
+  #   all             — every non-transfer outflow
+  #   non_discretionary — only categories flagged essential in ledger/rules.yaml
+  basis: REQUIRED # all | non_discretionary
+
+# ── §5.2 Concessional super ─────────────────────────────────────────────────
+# Per person, up to the cap (incl. carry-forward), only if the marginal tax
+# saving exceeds the hurdle. Cap and brackets come from tax/FY<year>.yaml —
+# never from here, and never from model memory (§2.4).
+super:
+  # The marginal tax saving must exceed this to justify locking money away
+  # until preservation age. Expressed in basis points of *tax saved per dollar
+  # contributed*, net of the 15% contributions tax.
+  #
+  # This is really a liquidity price: super is the highest-return step in the
+  # waterfall on pure arithmetic, and the only reason not to max it is that the
+  # money is inaccessible for years. A low hurdle means "I'll take the tax
+  # break"; a high hurdle means "I want the money reachable".
+  hurdle_bps: REQUIRED # e.g. 1000 = require a 10c-per-dollar net saving
+
+  # Cap headroom to leave unused, per person, per year. Guards against an
+  # employer SG true-up or a bonus pushing total concessional contributions
+  # over the cap, which attracts excess-contributions tax.
+  cap_headroom_dollars: REQUIRED # e.g. 1000
+
+  # Whether to draw on unused carry-forward cap from prior years. Eligibility
+  # depends on total super balance at 30 June of the prior year — the
+  # threshold lives in tax/FY<year>.yaml and is currently UNVERIFIED.
+  use_carry_forward: REQUIRED # true | false
+
+# ── §5.3 Offset ─────────────────────────────────────────────────────────────
+# The default sink. Returns the mortgage rate, risk-free, tax-free, liquid.
+# The rate itself is a property of the loan, not a preference — it lives on the
+# mortgage account in accounts.yaml so it can change without a policy decision.
+offset:
+  # Balance beyond which extra offset stops being useful. Once the offset
+  # equals the loan principal the marginal return on the next dollar is zero,
+  # so surplus should fall through to investment regardless of the hurdle.
+  # Leave null to let the engine derive it from the loan principal.
+  cap_at_principal: true
+
+# ── §5.4 Investment ─────────────────────────────────────────────────────────
+investment:
+  # The excess return, over the mortgage rate, required before a dollar goes to
+  # market risk instead of the offset. This is THE number in the whole model.
+  #
+  # Offset is risk-free, tax-free and liquid; equities are none of those. This
+  # premium is what you charge for giving that up. Setting it to 0 says "any
+  # expected outperformance is worth it", which is a strong claim given the
+  # offset return is certain and the equity return is not.
+  risk_premium_bps: REQUIRED # e.g. 300 = require mortgage rate + 3.00%
+
+  # Expected long-run pre-tax total return on the investment sleeve, used for
+  # the hurdle comparison in §5.4 and the projections in Phase 2.
+  # State the basis rather than a bare number — a projection is only as
+  # honest as the assumption behind it.
+  expected_return:
+    pre_tax_bps: REQUIRED # e.g. 750
+    basis: REQUIRED # free text: where this number comes from
+    franking_credits_included: REQUIRED # true | false
+
+  # Assumed holding period. Drives CGT discount eligibility (§4), which
+  # materially changes the after-tax return.
+  assumed_holding_years: REQUIRED # e.g. 10
+
+# ── §8 Ownership constraints ────────────────────────────────────────────────
+# Where marginal rates differ, the optimiser will consistently favour holding
+# assets in the lower earner's name. That is arithmetically correct and may be
+# the wrong answer for other reasons — relationship risk, estate planning,
+# future income crossover, or simply not wanting the household's assets
+# concentrated in one name.
+#
+# The engine must not surprise the user here (§8), so the tilt is OFF until
+# explicitly enabled, and any limit on it is stated as an explicit rule.
+ownership:
+  # Allow the engine to recommend holding new investments in the lower
+  # marginal-rate owner's name.
+  optimise_for_marginal_rate: REQUIRED # true | false
+
+  # If enabled: the maximum share of the investment sleeve, by value, that may
+  # sit in one person's name. null = no limit.
+  max_share_single_owner: REQUIRED # e.g. 0.7, or null
+
+  # Owners whose holdings must never be reduced by a rebalance recommendation.
+  never_rebalance_away_from: []
+
+# ── Reporting ───────────────────────────────────────────────────────────────
+reporting:
+  # Phase 0 exit criterion: two consecutive months where computed surplus
+  # matches reality within this tolerance (§7). Do not loosen this to make a
+  # month pass — everything downstream inherits the error.
+  surplus_tolerance_pct: 2.0
+
+  # Refuse to emit a recommendation if any tax value it depends on is
+  # UNVERIFIED (§2.4). Set false only with a decision record explaining why
+  # acting on unverified thresholds is acceptable this month.
+  block_on_unverified_tax_values: true
+
+  # Refuse to emit a recommendation while any transaction in the period is
+  # still UNCLASSIFIED, since an unclassified line may be income, expense, or
+  # an internal transfer — and the three give very different surpluses.
+  block_on_unclassified: true

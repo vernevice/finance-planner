@@ -1,0 +1,228 @@
+# tax/FY2027.yaml — Australian tax parameters for the 2026–27 income year
+# (1 July 2026 – 30 June 2027).
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# ⚠  EVERY VALUE IN THIS FILE IS `UNVERIFIED`. NOTHING HERE MAY BE USED.
+#
+# Invariant §2.4: tax and threshold values are stamped with the source and the
+# date they were verified, and are never asserted from model memory. On
+# 2026-08-04 an attempt was made to verify these against ato.gov.au directly.
+# It failed: `www.ato.gov.au:443` is blocked by this session's network egress
+# policy (gateway answered 403 to CONNECT). The ATO pages could not be read.
+#
+# The `candidate` fields below are LEADS FOR A HUMAN VERIFIER, not values.
+# They come from search-engine summaries of ATO pages — second-hand, possibly
+# stale, possibly conflating income years — or, where marked, from model
+# memory, which §2.4 forbids relying on outright. `value:` is null everywhere,
+# and `policy.reporting.block_on_unverified_tax_values` is true, so the engine
+# must refuse to produce a recommendation rather than quietly using a guess.
+#
+# TO VERIFY: open each source_url, confirm the figure applies to 2026–27, copy
+# it into `value:`, set `status: VERIFIED`, and fill `verified_on` /
+# `verified_by`. See docs/decisions/0002-tax-values-unverified.md.
+# ─────────────────────────────────────────────────────────────────────────────
+
+schema_version: 1
+financial_year: FY2027
+period:
+  starts: 2026-07-01
+  ends: 2027-06-30
+
+verification:
+  status: UNVERIFIED
+  attempted_on: 2026-08-04
+  attempted_by: claude-code-session
+  blocked_reason: >-
+    www.ato.gov.au unreachable — blocked by session egress policy
+    (403 to CONNECT). No ATO page was read.
+  # Re-verify at each financial-year rollover (§2.4). Next: FY2028 from
+  # 2027-07-01, which also needs a new file rather than an edit to this one.
+
+income_tax:
+  resident_brackets:
+    value: null
+    status: UNVERIFIED
+    candidate:
+      # Thresholds are the upper bound of each bracket; rate applies to the
+      # portion of taxable income within it. Excludes Medicare levy.
+      - { up_to: 18200, rate: 0.00 }
+      - { up_to: 45000, rate: 0.15 }
+      - { up_to: 135000, rate: 0.30 }
+      - { up_to: 190000, rate: 0.37 }
+      - { up_to: null, rate: 0.45 }
+    candidate_source: search summary of ATO "Tax rates – Australian resident"
+    source_url: https://www.ato.gov.au/tax-rates-and-codes/tax-rates-australian-residents
+    verified_on: null
+    verified_by: null
+    notes: >-
+      The 15% figure reportedly reflects the lowest marginal rate falling from
+      16% to 15% on 1 July 2026. The $18,200 tax-free threshold was NOT
+      confirmed for 2026–27 by the search result and is carried from model
+      memory — treat it as the least trustworthy line here. A further cut to
+      14% is understood to be legislated for 1 July 2027; that belongs in
+      FY2028.yaml, not this file.
+
+  medicare_levy:
+    value: null
+    status: UNVERIFIED
+    candidate: 0.02
+    candidate_source: MODEL_MEMORY — search did not return a rate for 2026–27
+    source_url: https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy
+    verified_on: null
+    verified_by: null
+    notes: >-
+      Low-income reductions and the Medicare levy surcharge are separate
+      mechanisms and are not modelled here. If either household member's
+      marginal calculation is near a surcharge threshold, that needs its own
+      entry before the super hurdle in §5.2 can be trusted.
+
+super:
+  concessional_cap:
+    value: null
+    status: UNVERIFIED
+    candidate: 32500
+    candidate_source: search summary of ATO "Concessional contributions cap"
+    source_url: https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/contributions-caps
+    verified_on: null
+    verified_by: null
+    notes: >-
+      Reported as rising to $32,500 from 1 July 2026, indexed to AWOTE in
+      $2,500 steps. This cap is per person and counts employer SG, salary
+      sacrifice and personal deductible contributions together — SG alone can
+      consume most of it at higher incomes, so §5.2 must subtract expected SG
+      before recommending a top-up.
+
+  contributions_tax_rate:
+    value: null
+    status: UNVERIFIED
+    candidate: 0.15
+    candidate_source: MODEL_MEMORY — not confirmed by any source read this session
+    source_url: https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds
+    verified_on: null
+    verified_by: null
+
+  super_guarantee_rate:
+    value: null
+    status: UNVERIFIED
+    candidate: 0.12
+    candidate_source: search summary of ATO "Super guarantee"
+    source_url: https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/super-guarantee
+    verified_on: null
+    verified_by: null
+
+  maximum_contribution_base_quarterly:
+    value: null
+    status: UNVERIFIED
+    candidate: 270830
+    candidate_source: search summary of ATO "Maximum contribution base"
+    source_url: https://www.ato.gov.au/businesses-and-organisations/super-for-employers/paying-super-on-payday/what-payments-are-qualifying-earnings/maximum-contributions-base
+    verified_on: null
+    verified_by: null
+    notes: >-
+      Reported as $270,830 for 2026–27, but the search result did not state
+      whether that is the quarterly or annual figure. The ATO has historically
+      published this per quarter. RESOLVE THE PERIOD BEFORE USE — reading a
+      quarterly cap as annual understates SG fourfold for a high earner.
+
+  carry_forward:
+    total_super_balance_threshold:
+      value: null
+      status: UNVERIFIED
+      candidate: null
+      candidate_source: NOT FOUND — search explicitly failed to confirm this figure
+      source_url: https://www.ato.gov.au/individuals-and-families/super-for-individuals-and-families/super/growing-and-keeping-track-of-your-super/caps-limits-and-tax-on-super-contributions/total-superannuation-balance
+      verified_on: null
+      verified_by: null
+      notes: >-
+        Carry-forward of unused concessional cap is available only if total
+        super balance at 30 June of the prior year is under this threshold.
+        No candidate is recorded because none was confirmed — a figure from
+        memory here would directly gate a real contribution decision.
+    lookback_years:
+      value: null
+      status: UNVERIFIED
+      candidate: 5
+      candidate_source: MODEL_MEMORY
+      source_url: https://www.ato.gov.au/individuals-and-families/super-for-individuals-and-families/super/growing-and-keeping-track-of-your-super/caps-limits-and-tax-on-super-contributions/concessional-contributions-cap
+      verified_on: null
+      verified_by: null
+
+  division_293:
+    threshold:
+      value: null
+      status: UNVERIFIED
+      candidate: 250000
+      candidate_source: search summary of ATO "Division 293 tax"
+      source_url: https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/division-293-tax
+      verified_on: null
+      verified_by: null
+      notes: >-
+        Above this combined income + concessional contributions figure, an
+        extra 15% applies to concessional contributions. This halves the tax
+        benefit and can flip the §5.2 hurdle test for a high earner, so it
+        must be modelled per person, not per household.
+    rate:
+      value: null
+      status: UNVERIFIED
+      candidate: 0.15
+      candidate_source: search summary of ATO "Division 293 tax"
+      source_url: https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/division-293-tax
+      verified_on: null
+      verified_by: null
+
+  non_concessional_cap:
+    value: null
+    status: UNVERIFIED
+    candidate: 130000
+    candidate_source: search summary of ATO "Non-concessional contributions cap"
+    source_url: https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/contributions-caps
+    verified_on: null
+    verified_by: null
+    notes: >-
+      Not used by the §5 waterfall, which only contemplates concessional
+      contributions. Recorded for completeness.
+
+  bring_forward:
+    total_super_balance_threshold:
+      value: null
+      status: UNVERIFIED
+      candidate: 1840000
+      candidate_source: search summary of ATO "Non-concessional contributions cap"
+      source_url: https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/contributions-caps
+      verified_on: null
+      verified_by: null
+    three_year_amount:
+      value: null
+      status: UNVERIFIED
+      candidate: 390000
+      candidate_source: search summary of ATO "Non-concessional contributions cap"
+      source_url: https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/contributions-caps
+      verified_on: null
+      verified_by: null
+
+cgt:
+  discount_rate:
+    value: null
+    status: UNVERIFIED
+    candidate: 0.50
+    candidate_source: search summary of ATO "CGT discount"
+    source_url: https://www.ato.gov.au/individuals-and-families/investments-and-assets/capital-gains-tax/cgt-discount
+    verified_on: null
+    verified_by: null
+
+  discount_min_holding_months:
+    value: null
+    status: UNVERIFIED
+    candidate: 12
+    candidate_source: search summary of ATO "CGT discount"
+    source_url: https://www.ato.gov.au/individuals-and-families/investments-and-assets/capital-gains-tax/cgt-discount
+    verified_on: null
+    verified_by: null
+    notes: >-
+      Measured to the CGT event, not the financial year. This is why
+      `acquisition_date` is mandatory on the Phase 3 portfolio contract (§4).
+
+# ── Deliberately absent ─────────────────────────────────────────────────────
+# Deductibility of recycled debt, trust distribution rules, and land tax are
+# Phase 5 concerns and are not modelled. See
+# docs/decisions/0003-defer-structural-strategies.md.
