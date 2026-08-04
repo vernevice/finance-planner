@@ -39,7 +39,10 @@ buffer:
   # capital costs. It is not a market view. Common range is 3–12; the right
   # answer depends on income stability, notice periods, and whether both
   # incomes could stop at once (same employer, same industry, same sector).
-  months: REQUIRED # integer or decimal, e.g. 6
+  #
+  # Set 2026-08-04 — see docs/decisions/0005-buffer-three-months.md.
+  # NOTE: the dollar target is undefined until `basis` below is also set.
+  months: 3
 
   # Which expenses count toward the buffer target. Discretionary spend can be
   # cut in a genuine emergency, so including it overstates the required buffer.
@@ -92,7 +95,11 @@ investment:
   # premium is what you charge for giving that up. Setting it to 0 says "any
   # expected outperformance is worth it", which is a strong claim given the
   # offset return is certain and the equity return is not.
-  risk_premium_bps: REQUIRED # e.g. 300 = require mortgage rate + 3.00%
+  #
+  # Set 2026-08-04 to the midpoint of a stated 200–300bps range — see
+  # docs/decisions/0006-risk-premium-250bps.md. The exact figure within that
+  # range was not specified; 250 is a placeholder for a deliberate choice.
+  risk_premium_bps: 250 # require mortgage rate + 2.50%
 
   # Expected long-run pre-tax total return on the investment sleeve, used for
   # the hurdle comparison in §5.4 and the projections in Phase 2.

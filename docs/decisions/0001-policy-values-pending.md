@@ -1,8 +1,14 @@
 # 0001 — policy.yaml scaffolded with no values set
 
 **Date:** 2026-08-04
-**Status:** Open — blocks Phase 1
+**Status:** Partially resolved — still blocks Phase 1
 **Touches invariants:** §2.6 (scope creep is a decision)
+
+> **Update 2026-08-04.** `buffer.months` is set by
+> [0005](0005-buffer-three-months.md) and `investment.risk_premium_bps` by
+> [0006](0006-risk-premium-250bps.md) — the two fields this record named as
+> the most consequential. The remaining `REQUIRED` fields are listed under
+> "Still unset" below. This record stays open until they are resolved.
 
 ## The change
 
@@ -49,6 +55,22 @@ are what stop the same argument being re-run every time markets move (§6).
 Defaulting a field instead would need an argument that the default is
 genuinely uncontroversial for this household, which is a claim about them,
 not about the software.
+
+## Still unset
+
+Each needs a value, and the material ones need their own record:
+
+| Field | Note |
+|---|---|
+| `owners.*.name`, `.birth_year` | Narration, and super preservation-age horizon |
+| `buffer.basis` | Interacts with the 3-month choice — see [0005](0005-buffer-three-months.md) |
+| `super.hurdle_bps` | Material — the price of locking money away to preservation age |
+| `super.cap_headroom_dollars` | Guards against excess-contributions tax on an SG true-up |
+| `super.use_carry_forward` | Gated on a TSB threshold that is unverified ([0002](0002-tax-values-unverified.md)) |
+| `investment.expected_return.*` | Material — §5.4 has nothing to compare the premium against without it |
+| `investment.assumed_holding_years` | Drives CGT discount eligibility |
+| `ownership.optimise_for_marginal_rate` | Material — §8 requires this to be explicit, not inferred |
+| `ownership.max_share_single_owner` | Only bites if the tilt above is enabled |
 
 ## Open questions
 

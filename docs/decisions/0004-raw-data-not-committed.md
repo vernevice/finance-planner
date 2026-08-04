@@ -1,7 +1,7 @@
 # 0004 — Raw exports and snapshots are gitignored by default
 
 **Date:** 2026-08-04
-**Status:** Open — needs a call from the household
+**Status:** Accepted — confirmed by the household 2026-08-04
 **Touches invariants:** §2.3 (the ledger is append-only)
 
 ## The change
